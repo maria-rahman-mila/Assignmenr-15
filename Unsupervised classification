@@ -1,0 +1,30 @@
+code:
+var upz=table.filter(ee.Filter.eq("NAME_3","Matlab"))
+print(upz)
+
+var landsat =ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
+             .filterBounds(upz)
+             .filterDate('2022-01-01','2022-12-31')
+             .filter(ee.Filter.lt('CLOUD_COVER',20))
+             .median()
+             .clip(upz)
+          
+var bands=['SR_B2','SR_B3','SR_B4','SR_B6']
+var image = landsat.select(bands)
+Map.centerObject(upz,10)
+Map.addLayer(image,{bands:['SR_B2','SR_B3','SR_B4'],min:0,max:3000},"Landsat RGB_image")
+var sample =image.sample({
+   region:upz,
+   scale:30,
+   numPixels:5000
+ });
+ var clusterer =ee.Clusterer.wekaKMeans(5).train(sample);
+ var result= image.cluster(clusterer)
+ Map.addLayer(result.randomVisualizer(),{},'Clusters')
+  Export.image.toDrive({
+   image: result,
+   description: 'Landsat_9 Unsupervisedclassification',
+   scale: 30,
+   region: upz,
+   fileFormat:"GeoTIFF"
+  });
